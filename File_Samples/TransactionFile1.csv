@@ -1,0 +1,3 @@
+TransactionId,Amount,Currency,Transaction Date,Status
+Invoice0000001,"1,000.00",USD,1/23/2022 17:49,Approved
+Invoice0000002,300,USD,1/23/2022 17:49,Failed

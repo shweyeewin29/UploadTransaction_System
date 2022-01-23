@@ -1,0 +1,210 @@
+﻿
+@{
+    ViewBag.Title = "TransactionList";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@Styles.Render("~/bundles/toolscss")
+<div class="container" style="margin-top:70px;">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="form-group">
+                <div class="col-md-12">
+                    <h4><strong>Transaction Data List</strong></h4>
+                    <hr />
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-md-4">
+                    <label>From Date:</label>
+                    @Html.TextBox("FromDate", "{0:yyyy-MM-dd}", new { @class = "form-control", @type = "date", @tabindex = "1", width = "100%" })
+                </div>
+                <div class="col-md-4">
+                    <label>To Date:</label>
+                    @Html.TextBox("ToDate", "{0:yyyy-MM-dd}", new { @class = "form-control", @type = "date", @tabindex = "2", width = "100%" })
+                </div>
+            </div>
+        </div>
+        <br />
+        <div class="col-md-12" style="margin-top:10px;">
+            <div class="form-group">
+                <div class="col-md-4">
+                    <label>Status:</label><br />
+                    @Html.DropDownList("txtStatus", new SelectList(ViewBag.StatusList), "--- Select ---", new { @class = "form-control select2", tabindex = 3 })
+                </div>
+                <div class="col-md-4">
+                    <label>Currency:</label><br />
+                    @Html.DropDownList("txtCurrency", new SelectList(ViewBag.CurrencyList, "CurrencyCode", "CurrencyCode"), "--- Select ---", new { @class = "form-control select2", tabindex = 3 })
+                </div>
+                <div class="col-md-4">
+                    &nbsp;<br />
+                    <button class="btn btn-info" id="btnView">View</button>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+    <br />
+    <div class="row">
+        <div class="col-md-12">
+            <div class="form-group">
+                <div class="col-md-12">
+                    <div class="table-responsive">
+                        <table class="table table-bordered" cellspacing="0" id="TransactionTbl">
+                            <thead>
+                                <tr>
+                                    <th>No.</th>
+                                    <th>Id</th>
+                                    <th>Payment</th>
+                                    <th hidden></th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="5" style="text-align:center;">No Data.</td>
+                                </tr>
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <th colspan="2" style="text-align:right;">Total:</th>
+                                    <th></th>
+                                    <th class="hidden"></th>
+                                    <th></th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+<div id="progress" style="margin: 0px; padding: 0px; position: fixed; right: 0px;
+    top: 0px; width: 100%; height: 100%; background-color: #666666; z-index: 30001;
+    opacity: .8; display:none;">
+    <p style="position: center;">
+        <div class="ring">
+        </div>
+    </p>
+</div>
+@section Scripts{
+    @Scripts.Render("~/bundles/toolsjs")
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+           
+            GetDate();
+            $('.select2').select2({
+                width: '80%'
+            });
+            $("#btnView").click(function () {
+                $("#progress").show();
+                TransactionFillGrid();
+            });
+        });
+        function TransactionFillGrid() {
+            var table = $('#TransactionTbl').DataTable(
+                {
+                    "destroy": true,
+                    "responsive": false,
+                    "scrollX": false,
+                    "displayLength": 50,
+                    "pageLength": 50,
+                    "lengthMenu": [10, 15, 20, 25, 50, 75, 100],
+                    dom: "<'row'<'col-sm-6'B><'col-sm-6'f> >" +
+                        "<'row'<'col-sm-12'tr>>" +
+                        "<'row'<'col-sm-4'l><'col-sm-4'i><'col-sm-4'p>>",
+                    buttons: [
+                        {
+                            extend: 'excelHtml5',
+                            footer: true,
+                            title: 'Transaction Data List ',
+                            exportOptions: {
+                                columns: 'visible'
+                            },
+                            filename: function () {
+                                return "Transaction Data List ";
+                            },
+                            customize: function (xlsx) {
+                                var sheet = xlsx.xl.worksheets['sheet1.xml'];
+                                $('c[r=A1]', sheet).attr('s', '50');
+                                $('c[r=A1]', sheet).attr('s', '2');
+                                $('c[r=A2]', sheet).attr('s', '50');
+                                $('c[r=A2]', sheet).attr('s', '2');
+                            }
+                        },
+                    ],
+                    "ajax": {
+                        "url": "/api/transactionapi/gettransactiondata/?fromdate=" + $("#FromDate").val() + "&todate=" + $("#ToDate").val() + "&status=" + $("#txtStatus").val() + "&currency=" + $("#txtCurrency").val(),
+                        "type": "GET",
+                        "datatype": "json",
+                        "dataSrc": ''
+                    },
+                    "initComplete": function (settings, json) {
+                        $("#progress").hide();
+                    },
+                    "columns": [
+                        { "data": "RowNo", width: '5%' },
+                        { "data": "TransactionId", width: '30%' },
+                        { "data": "Amount", width: '30%',className: 'text-right'},
+                        { "data": "CurrencyCode", visible: false },
+                        { "data": "Status", width: '5%'},
+                    ],
+                    "columnDefs": [
+                        {
+                            "targets": 2,
+                            "data": "Amount",
+                            "render": function (data, type, row) {
+                                var str = data + ' (' + row.CurrencyCode + ')';
+                                return str;
+                            }
+                        },
+                        {
+                            "targets": [4],
+                            "data": 'Status',
+                            "render": function (data, type, row) {
+                                if (data == "A") {
+                                    return '<strong style="color:blue">'+data+'</strong>';
+                                }
+                                else if (data == "R") {
+                                    return '<strong style="color:red">' + data +'</strong>';
+                                }
+                                else if (data == "D") {
+                                    return '<strong style="color:green">' + data +'</strong>';
+                                }
+                                else
+                                    return '';
+                            }
+                        },
+                    ],
+                    "footerCallback": function (row, data, start, end, display) {
+                        var api = this.api(), data;
+                        // Remove the formatting to get integer data for summation
+                        var intVal = function (i) {
+                            return typeof i === 'string' ?
+                                i.replace(/[\$,]/g, '') * 1 :
+                                typeof i === 'number' ?
+                                    i : 0;
+                        };
+                        // Total over all pages
+                        totalamt = api
+                            .column(2)
+                            .data()
+                            .reduce(function (a, b) {
+                                return intVal(a) + intVal(b);
+                            }, 0);                    
+                        $(api.column(2).footer()).html(Number(totalamt).toLocaleString());
+                    },
+                });
+            return table;
+        }
+
+        function GetDate() {
+            var today = new Date().toISOString().slice(0, 10);
+            $("#FromDate").val(moment(new Date()).format("YYYY-MM-DD"));
+            $("#ToDate").val(moment(new Date()).format("YYYY-MM-DD"));
+        }
+    </script>
+}
